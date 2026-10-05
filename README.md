@@ -29,16 +29,17 @@ The project started as an attempt to understand what actually happens underneath
 
 The framework has been tested against progressively different learning problems:
 
-| Problem       | Type                             | Result         |     |     |
-| ------------- | -------------------------------- | -------------- | --- | --- |
-| XOR           | Binary classification            | Successful     |     |     |
-| `sin(x)`      | Periodic regression              | Successful     |     |     |
-| `cos(x)`      | Periodic regression              | Successful     |     |     |
-| `x²`          | Nonlinear regression             | Successful     |     |     |
-| `x³`          | Nonlinear regression             | Successful     |     |     |
-| `x⁴`          | Nonlinear regression             | Successful     |     |     |
+| Problem       | Type                             | Result         |
+| ------------- | -------------------------------- | -------------- |
+| XOR           | Binary classification            | Successful     |
+| `sin(x)`      | Periodic regression              | Successful     |
+| `cos(x)`      | Periodic regression              | Successful     |
+| `x²`          | Nonlinear regression             | Successful     |
+| `x³`          | Nonlinear regression             | Successful     |
+| `x⁴`          | Nonlinear regression             | Successful     |
 | `x` with Tanh | Piecewise-function approximation | Successful     |
 | `x` with ReLU | Piecewise-linear representation  | Near-exact fit |
+| Iris          | Multi-class classification       | 100% accuracy  |
 
 These experiments were used not only to demonstrate the network, but also to validate the underlying implementation and investigate issues such as gradient saturation, numerical instability, dimensional consistency, and activation-function behavior.
 

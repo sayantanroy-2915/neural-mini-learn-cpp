@@ -48,8 +48,7 @@ public:
 	void print() const;
 	// Matrix addition
 	Matrix operator+(const Matrix& m) const;
-	/* Element wise multiplication
-	* Dot product*/
+	// Element wise multiplication
 	Matrix operator^(const Matrix& m) const;
 	// Matrix and scalar multiplication
 	Matrix operator*(const float s) const;
@@ -96,12 +95,12 @@ public:
 	void set(size_t i, float value);
 	// Display the vector in std::cout
 	void print() const;
-	// Dot product
-	Vector operator*(const Vector &v) const;
-	// Transpose
-	Matrix operator~() const;
 	// Sum
 	float sum() const;
+	// Dot product
+	float operator*(const Vector &v) const;
+	// Transpose
+	Matrix operator~() const;
 };
 
 #endif

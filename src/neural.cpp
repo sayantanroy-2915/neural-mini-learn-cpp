@@ -23,31 +23,50 @@ Vector softmax(Vector v) {
 	return exp_v / (exp_v.sum());
 }
 
-Vector activate(activation act, Vector v) {
+// 	(i = j) ? (yi (1 - yi)) : (- yi * yj)
+// Must call `dSoftmax(y)` not `dSoftmax(z)`
+Matrix dSoftmax(Vector v) {
+	size_t n = v.len();
+	Matrix d(n, n);
+	for (size_t i0 = 0; i0 < n; i0++) {
+		float y = v.get(i0);
+		d.set(i0, i0, y * (1 - y));
+		for (size_t i1 = 0; i1 < i0; i1++) {
+			float y = -(v.get(i0) * v.get(i1));
+			d.set(i0, i1, y);
+			d.set(i1, i0, y);
+		}
+	}
+	return d;
+}
+
+// y = f(z)
+Vector activate(Activation act, Vector v) {
 	switch (act) {
-		case activation::RELU:
+		case Activation::RELU:
 			return v.apply([](float x) -> float { return (x >= 0) ? x : 0.0; });
-		case activation::SIGMOID:
+		case Activation::SIGMOID:
 			return v.apply(sigmoid);
-		case activation::TANH:
+		case Activation::TANH:
 			return v.apply(tanhf);
-		case activation::SOFTMAX:
+		case Activation::SOFTMAX:
 			return softmax(v);
-		case activation::LINEAR:
+		case Activation::LINEAR:
 			return Vector(v);
 		}
 	return v;	// For satisfaction
 }
 
-Vector dActivate(activation act, Vector v) {
+// f'(z) = dz/dy
+Vector dActivate(Activation act, Vector v) {
 	switch (act) {
-		case activation::RELU:
+		case Activation::RELU:
 			return v.apply([](float x) -> float { return (x >= 0) ? 1.0 : 0.0; });
-		case activation::SIGMOID:
+		case Activation::SIGMOID:
 			return v.apply(sigmoid).apply([](float x) -> float { return x * (1.0 - x); });
-		case activation::TANH:
+		case Activation::TANH:
 			return v.apply([](float x) -> float { return 1.0 - pow(tanhf(x), 2); });
-		case activation::LINEAR:
+		case Activation::LINEAR:
 			return Vector(v.len(), []() -> float { return 1.0f; });
 		}
 	return v;	// For satisfaction
@@ -55,7 +74,7 @@ Vector dActivate(activation act, Vector v) {
 
 // ========================== LAYER ==========================
 
-Layer::Layer(size_t nx_, size_t ny_, activation act_) : nx(nx_), ny(ny_), act(act_), W(ny, nx, RNG), b(ny, RNG) {}
+Layer::Layer(size_t nx_, size_t ny_, Activation act_) : nx(nx_), ny(ny_), act(act_), W(ny, nx, RNG), b(ny, RNG) {}
 
 void Layer::printWeights() {
 	std::cout << "Dimension: (" << nx << ", " << ny << ")\n";
@@ -72,37 +91,43 @@ Vector Layer::forward(Vector x_) {
 	return Vector(y);
 }
 
-Vector Layer::dCost(Vector Y, loss l) {
+Vector Layer::dCost(Vector Y, Loss L) {
 	assert(Y.len() == ny);
-	switch (l) {
-		case loss::MSE:
+	auto oneminus = [](float x) -> float { return 1.0 - x; };
+	switch (L) {
+		case Loss::MSE:
 			return (2.0 / ny) * (y - Y);
-		case loss::BCE:
-			auto oneminus = [](float x) -> float { return 1.0 - x; };
+		case Loss::BCE:
 			return -(Y / y) - y * Y.apply(oneminus) / y.apply(oneminus);
-		}
-	return Vector(ny);	// Blank Vector for satisfaction
+		case Loss::CCE:
+			return -(Y / y);
+	}
+	return Vector(ny); // Blank Vector for satisfaction
 }
 
-Vector Layer::backprop(Vector dl_do, float lr) {
-	assert(dl_do.len() == ny);
-	// Error term (nx x 1)
-	Vector d = dl_do * dActivate(act, z);
-	// Weight gradient (ny x nx)
-	Matrix dl_dW = (Matrix)d * (~x);
+Vector Layer::backprop(Vector dL_dy, float lr) {
+	assert(dL_dy.len() == ny);
+	// Error term (ny x 1)
+	Vector d;
+	if (act == Activation::SOFTMAX)
+		d = dSoftmax(y) * dL_dy;	// (ny x ny) x (ny x 1)
+	else
+		d = dL_dy ^ dActivate(act, z);	// (ny x 1) xelem (ny x 1)
+	// Weight gradient (ny x nx) = (ny x 1) x (1 x nx)
+	Matrix dL_dW = (Matrix)d * (~x);
 	// Bias gradient (ny x 1) = Error term
-	// Backpropagated signal (nx x 1)
-	Vector dl_dx = ~W * d;
+	// Backpropagated signal (nx x 1) = (nx x ny) x (ny x 1)
+	Vector dL_dx = ~W * d;
 	// Update
-	W = W - lr * dl_dW;
+	W = W - lr * dL_dW;
 	b = b - lr * d;
 	// Return backpropagated signal
-	return Vector(dl_dx);
+	return dL_dx;
 }
 
 // ========================== MODEL ==========================
 
-Model::Model(std::vector<size_t> nodeCounts, std::vector<activation> acts, loss L_): L(L_) {
+Model::Model(std::vector<size_t> nodeCounts, std::vector<Activation> acts, Loss L_): L(L_) {
 	size_t nLayers = acts.size();
 	assert(nLayers > 0 && nLayers + 1 == nodeCounts.size());
 	for (size_t i = 0; i < nLayers; i++)

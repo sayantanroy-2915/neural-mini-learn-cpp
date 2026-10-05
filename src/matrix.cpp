@@ -296,8 +296,15 @@ void Vector::print() const {
 	std::cout << "\n";
 }
 
-Vector Vector::operator*(const Vector &v) const {
-	return (*this) ^ v;
+float Vector::sum() const {
+	float s = 0.0f;
+	for (size_t i = 0; i < elements; i++)
+		s += get(i);
+	return s;
+}
+
+float Vector::operator*(const Vector &v) const {
+	return ((Vector)((*this) ^ v)).sum();
 }
 
 Matrix Vector::operator~() const {
@@ -305,11 +312,4 @@ Matrix Vector::operator~() const {
 	for (int i = 0; i < elements; i++)
 		m.set(i, get(i));
 	return m;
-}
-
-float Vector::sum() const {
-	float s = 0.0f;
-	for (size_t i = 0; i < elements; i++)
-		s += get(i);
-	return s;
 }
